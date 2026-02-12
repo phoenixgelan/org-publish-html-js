@@ -1,3 +1,29 @@
-* 要做的事 [0/2]
-- [ ] TypeScript
-- [ ]
+#+ORGTBL: SEND Shortcuts orgtbl-to-generic :splice t :skip 2 :lstart "\t+'<tr>" :lend "</tr>'" :fmt (1 "<td><code><b>%s</b></code></td>" 2 "<td>%s</td>") :hline "\t+'</tbody><tbody>'"
+| Key          | Function                                                |
+|--------------+---------------------------------------------------------|
+| ? / &iquest; | show this help screen                                   |
+|--------------+---------------------------------------------------------|
+|              | <b>Moving around</b>                                    |
+| n / p        | goto the next / previous section                        |
+| N / P        | goto the next / previous sibling                        |
+| t / E        | goto the first / last section                           |
+| g            | goto section...                                         |
+| u            | go one level up (parent section)                        |
+| i / C        | show table of contents / tags index                     |
+| b / B        | go back to last / forward to next visited section.      |
+| h / H        | go to main index in this directory / link HOME page     |
+|--------------+---------------------------------------------------------|
+|              | <b>View</b>                                             |
+| m / x        | toggle the view m¡ode between info and plain / slides   |
+| f / F        | fold current section / whole document (plain view only) |
+|--------------+---------------------------------------------------------|
+|              | <b>Searching</b>                                        |
+| s / r        | search forward / backward....                           |
+| S / R        | search again forward / backward                         |
+| o            | occur-mode                                              |
+| c            | clear search-highlight                                  |
+|--------------+---------------------------------------------------------|
+|              | <b>Misc</b>                                             |
+| l / L / U    | display HTML link / Org link / Plain-URL                |
+| v / V        | scroll down / up                                        |
+| W            | Print                                                   |
