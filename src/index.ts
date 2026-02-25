@@ -22,7 +22,7 @@ import {
 } from './utils'
 
 
-import { 
+import {
   containerIdPrefix,
   popupIdInfo,
   clickElementClassNames
@@ -40,12 +40,50 @@ const scrollTo = (top:number, option?:MyObject) => {
 
 /**
  * 根据id，页面跳转至相应元素
+ * @param {string} nodeId 节点ID
  */
 const jumpToNodeById = (nodeId:string) => {
   popupManager.closePopup()
   const node = pageNodeInfo[nodeId]
   const top = node.top
   scrollTo(top + 4) // 稍微多滚动一点，触发 document scroll 中的判断逻辑
+}
+
+/**
+ * 在节点访问历史记录中“前进”或“后退
+ * 如果是通过搜索结果跳转,那么清空"前面"的记录
+ * @param {boolean} isForward 是否前进
+ * @param {string} nodeId 前进时的节点ID
+ */
+const moveInHistory = (isForward:boolean, nodeId?:string) => {
+  if (isForward) {
+    if (nodeId) {
+      nodeHistory.length = nodeHistoryIndex + 1 //  < 0 ? 0 : nodeHistoryIndex
+      nodeHistory.push(nodeId)
+      nodeHistoryIndex++
+      jumpToNodeById(nodeId)
+    } else {
+      if (nodeHistoryIndex === nodeHistory.length - 1) {
+        showMsg('到头了')
+        return
+      }
+      if (nodeHistoryIndex < nodeHistory.length - 1) {
+        nodeHistoryIndex++
+      }
+      jumpToNodeById(nodeHistory[nodeHistoryIndex])
+    }
+  } else {
+    // 向后时不需要清除访问历史记录
+    if (nodeHistoryIndex <= 0) {
+      showMsg('到头了')
+      return
+    }
+
+    if (nodeHistoryIndex > 0) {
+      nodeHistoryIndex--
+    }
+    jumpToNodeById(nodeHistory[nodeHistoryIndex])
+  }
 }
 
 const getPrevNode = (nodeId:string) => {
@@ -66,9 +104,20 @@ const getNextNode = (nodeId:string) => {
 
 let pageNodeInfo:MyObject = {};
 
-let pageNodeArr:Array<MyObject> = []; 
+let pageNodeArr:Array<MyObject> = [];
 
 let pageTags:MyObject = {};
+
+/**
+ * 记录节点访问历史记录
+ */
+let nodeHistory:Array<string> = [];
+
+/**
+ * 当前节点在访问历史记录中的索引
+ * 通过 b / f 操作页面时定位
+ */
+let nodeHistoryIndex:number = -1;
 
 /**
  * 当前页面的显示状态
@@ -176,9 +225,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const info = generateInfo(ul)
   pageNodeInfo = info.obj
   pageNodeArr = info.arr
-  console.log('%cinfo', 'padding:2px;border-radius:4px;color:#fff;font-size:16px;background:green;');
-  console.log(info.obj)
-  console.log(info.arr)
   info.arr.forEach(item => {
     const tags = item.tags
     if (tags.length > 0) {
@@ -189,6 +235,9 @@ document.addEventListener('DOMContentLoaded', function() {
   })
 
   curContainerId = pageNodeArr[0].containerId
+
+  nodeHistory = [pageNodeArr[0].id]
+  nodeHistoryIndex = 0
 
   searchInput = document.getElementById('search-input') as HTMLInputElement
   searchResult = document.getElementById('search-result') as HTMLElement
@@ -304,7 +353,7 @@ const handleSearchPopupKeyup = (key:string, e:KeyboardEvent) => {
   if (key === 'Enter' && searchResultArr.length > 0) {
     const item = searchResultArr[searchResultSelectedIndex]
     const nodeId = item.id
-    jumpToNodeById(nodeId)
+    moveInHistory(true, nodeId)
   }
 
 
@@ -314,7 +363,7 @@ const handleSearchPopupKeyup = (key:string, e:KeyboardEvent) => {
     selectItem(searchResult.getElementsByClassName('search-result-item'), searchResultSelectedIndex)
     const item = searchResultArr[searchResultSelectedIndex]
     const nodeId = item.id
-    jumpToNodeById(nodeId)
+    moveInHistory(true, nodeId)
   }
 }
 
@@ -346,7 +395,8 @@ const handleTagSearchPopupKeyup = (key:string, e:KeyboardEvent) => {
   if (key === 'Enter' && tagSearchResultArr.length > 0) {
     const item = tagSearchResultArr[tagSelectedIndex]
     const nodeId = item.id
-    jumpToNodeById(nodeId)
+    moveInHistory(true, nodeId)
+
   }
 
 
@@ -356,7 +406,8 @@ const handleTagSearchPopupKeyup = (key:string, e:KeyboardEvent) => {
     selectItem(tagSearchResult.getElementsByClassName('search-result-item'), tagSelectedIndex)
     const item = tagSearchResultArr[tagSelectedIndex]
     const nodeId = item.id
-    jumpToNodeById(nodeId)
+    moveInHistory(true, nodeId)
+
   }
 }
 
@@ -375,7 +426,7 @@ const handleKeyup = (key:string, e:KeyboardEvent) => {
   // ArrowDown / ArrowUp / ArrowLeft / ArrowRight / Meta / Alt / Control / Backspace
   // Enter
 
-  if (key === 'Escape') { 
+  if (key === 'Escape') {
     popupManager.closePopup()
     return
   }
@@ -410,12 +461,20 @@ const handleKeyup = (key:string, e:KeyboardEvent) => {
     case 'B':
       scrollTo(totalHeight)
       break
-    
+
+    case 'b':
+      moveInHistory(false)
+      break
+
+    case 'f':
+      moveInHistory(true)
+      break
+
     case 'i':
       showTableOfContent = !showTableOfContent
       tableOfContent.style.display = showTableOfContent ? 'block' : 'none'
       break;
-    
+
     case 'l':
       copyTextToClipboard(curNode.id)
       showNotification(curNode.name, curNode.id)
@@ -426,23 +485,24 @@ const handleKeyup = (key:string, e:KeyboardEvent) => {
       nextNode = pageNodeArr[curIndex + 1]
       if (curNode.level === nextNode.level) {
         curContainerId = nextNode.containerId
-        jumpToNodeById(nextNode.id)
+        moveInHistory(true, nextNode.id)
+
       } else if (curNode.level < nextNode.level) {
         const tempArr = pageNodeArr.filter(i => i.level === curNode.level)
         const index = tempArr.findIndex(i => i.id === curNode.id)
         if (index < tempArr.length - 1) {
           prevNode = tempArr[index + 1]
           curContainerId = prevNode.containerId
-          jumpToNodeById(prevNode.id)
+          moveInHistory(true, prevNode.id)
         }
-      }      
+      }
       break
-      
+
     case 'n':
       if (curIndex >= pageNodeArr.length - 1) { return }
       nextNode = pageNodeArr[curIndex + 1]
       curContainerId = nextNode.containerId
-      jumpToNodeById(nextNode.id)
+      moveInHistory(true, nextNode.id)
       break
 
     case 'P':
@@ -450,14 +510,16 @@ const handleKeyup = (key:string, e:KeyboardEvent) => {
       prevNode = pageNodeArr[curIndex - 1]
       if (curNode.level === prevNode.level) {
         curContainerId = prevNode.containerId
-        jumpToNodeById(prevNode.id)
+        moveInHistory(true, prevNode.id)
+
       } else if (curNode.level < prevNode.level) {
         const tempArr = pageNodeArr.filter(i => i.level === curNode.level)
         const index = tempArr.findIndex(i => i.id === curNode.id)
         if (index > 0) {
           prevNode = tempArr[index - 1]
           curContainerId = prevNode.containerId
-          jumpToNodeById(prevNode.id)
+          moveInHistory(true, prevNode.id)
+
         }
       }
       break
@@ -466,7 +528,7 @@ const handleKeyup = (key:string, e:KeyboardEvent) => {
       if (curIndex <= 0) { return }
       prevNode = pageNodeArr[curIndex - 1]
       curContainerId = prevNode.containerId
-      jumpToNodeById(prevNode.id)
+      moveInHistory(true, prevNode.id)
       break
 
     case 's':
@@ -477,9 +539,11 @@ const handleKeyup = (key:string, e:KeyboardEvent) => {
         searchInput.focus()
       })
       break;
+
     case 'T':
       scrollTo(0)
       break
+
     case 't':
       popupManager.openPopup(popupIdInfo.tagSearch, function () {
         clearSelectedTags()
@@ -502,15 +566,15 @@ const handleKeyup = (key:string, e:KeyboardEvent) => {
       }
       if (tempNode) {
         curContainerId = tempNode.containerId
-        jumpToNodeById(tempNode.id)
+        moveInHistory(true, tempNode.id)
       }
       break;
-    
+
     case 'V':
       h = currentHeight > height ? (currentHeight - height) : 0
       scrollTo(h)
       break;
-    
+
     case 'v':
       h = Math.min(currentHeight + height, totalHeight) //  (currentHeight + height) > totalHeight ? totalHeight : 0
       scrollTo(h)
@@ -564,7 +628,8 @@ document.addEventListener('click', function(e: MouseEvent) {
   if (parent) {
     const nodeId = parent.dataset.nodeid
     if (nodeId) {
-      jumpToNodeById(nodeId)
+      moveInHistory(true, nodeId)
+
     }
   }
 });

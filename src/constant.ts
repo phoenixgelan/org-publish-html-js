@@ -77,6 +77,10 @@ export const helpInfoArr = [
         key: 'T / B',
         desc: 'scroll to top / bottom'
       },
+      {
+        key: 'b / f',
+        desc: 'go back to last / forward to next visited section'
+      }
       // {
       //   key: 'f / b',
       //   desc: 'goto next / previous visited section'
